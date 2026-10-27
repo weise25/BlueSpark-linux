@@ -52,6 +52,12 @@ it, checks it and rebuilds (a window shows the progress, a few minutes). Your sa
 | `vibration=true` | controller vibration |
 | `nointro=false` | the game's own intro |
 | `autoupdate=false` | no update check at the start |
+| `resolution_scale=2` | sharper picture: the game draws at 2560x1440 (`3`: 3840x2160) instead of 1280x720 |
+| `anisotropic=16` | sharper textures at an angle (16 is the default; `1` turns it off) |
+| `fxaa=on` | smoother edges (`extreme` for more) |
+
+`resolution_scale` costs a lot of graphics power: `2` needs a mid-range card (an RTX 3060 or so) to stay at 60
+frames a second, `3` a high-end one. Below 60 the game slows down, so try it in Practice first.
 
 Keys, controllers and everything else: the `README.txt` that comes with the game, in `~/Games/BlueSpark`.
 
@@ -74,8 +80,9 @@ missing. Report Linux problems here, in this fork's issues, not to the original 
 ## How it works
 
 - `linux/install.sh`: the one-time setup above.
-- `linux/play.sh`: what Steam starts. Checks for updates, then starts `ttt2.exe` through Proton with the same
-  switches as Start Here's Play TTT2.
+- `linux/play.sh`: the Steam shortcut's launch options (`play.sh %command%`). Steam starts `ttt2.exe` with Proton
+  itself, in the Steam Linux Runtime and with Steam Input, so controllers work as in any Steam game; `play.sh`
+  checks for updates first and adds the same switches as Start Here's Play TTT2.
 - `linux/update.sh`: the original project's feed (`latest.json`), and the Linux scripts from this fork.
 - `linux/build.sh`: Start Here's steps 1 to 3. LLVM 20.1.8 and xwin cross-compile the Windows `ttt2.exe` on Linux,
   the code translator `rexglue.exe` runs through Proton's wine, and the same checks as on Windows (the translation

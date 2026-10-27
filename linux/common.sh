@@ -63,6 +63,27 @@ find_proton() {
     return 1
 }
 
+# The name Steam knows a Proton by (its CompatToolMapping): a compatibilitytools.d tool's own name from its
+# compatibilitytool.vdf, or Valve's proton_experimental / proton_<major>.
+proton_tool_name() {
+    local p="$1" n
+    if [ -f "$p/compatibilitytool.vdf" ]; then
+        n="$(python3 -I -c '
+import re, sys
+t = open(sys.argv[1], encoding="utf-8", errors="replace").read()
+t = re.sub(r"//[^\n]*", "", t)
+m = re.search(r"\"compat_tools\"\s*\{\s*\"([^\"]+)\"", t)
+print(m.group(1) if m else "")' "$p/compatibilitytool.vdf")"
+        [ -n "$n" ] && { echo "$n"; return; }
+    fi
+    case "$(basename "$p")" in
+        "Proton - Experimental") echo proton_experimental ;;
+        "Proton Hotfix") echo proton_hotfix ;;
+        Proton\ *) n="$(basename "$p")"; n="${n#Proton }"; echo "proton_${n%%.*}" ;;
+        *) basename "$p" ;;
+    esac
+}
+
 steam_running() { pgrep -x steam >/dev/null || pgrep -f 'ubuntu12_32/steam' >/dev/null; }
 
 # --- messages: a window when there's a desktop and no terminal (started from Steam), else the terminal --------------

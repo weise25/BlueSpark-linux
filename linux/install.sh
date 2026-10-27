@@ -140,8 +140,11 @@ if steam_running; then
     steam_running && die "Steam didn't close. Close it yourself and run this again."
     sleep 2
 fi
+# (Steam starts ttt2.exe itself with Proton, in the Steam Linux Runtime and with Steam Input, so controllers work;
+# play.sh runs first as its launch options, for the updates and the game's switches.)
 python3 -I "$LINUX_DIR/tools/steam_shortcut.py" --steam "$(steam_root)" --name "Tekken Tag Tournament 2 (BlueSpark)" \
-    --exe "$LINUX_DIR/play.sh" --start-dir "$LINUX_DIR" --icon "$REX/assets/gamerpic.png" \
+    --exe "$BUILD/ttt2.exe" --start-dir "$BUILD" --launch-options "\"$LINUX_DIR/play.sh\" %command%" \
+    --compat-tool "$(proton_tool_name "$proton")" --icon "$REX/assets/gamerpic.png" \
     --hero "$REX/assets/splash/bluespark-1920x1080.jpg" --header "$REX/assets/splash/bluespark-1920x1080.jpg"
 nohup "${steam_cmd[@]}" >/dev/null 2>&1 &
 

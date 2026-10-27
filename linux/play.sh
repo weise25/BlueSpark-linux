@@ -10,7 +10,8 @@
 #
 # Settings: rex/userdata/launcher-settings.txt, the same keys as on Windows (display=borderless|fullscreen|
 # windowed-<W>x<H>, tearing=, online=false, keyboard=false, vibration=true, nointro=false, logupload=false,
-# crashlog=false, autoupdate=false). Your profile (online identity, saves, name): data/profile.
+# crashlog=false, autoupdate=false; and the picture's resolution_scale=, anisotropic=, fxaa=, below). Your profile
+# (online identity, saves, name): data/profile.
 source "$(dirname "$0")/common.sh"
 exe="$BUILD/ttt2.exe"
 userdata="$REX/userdata"
@@ -23,13 +24,22 @@ setting_value() { [ -f "$settings" ] && tr -d '\r' < "$settings" | sed -n "s/^$1
 offline=0
 askname=0
 pass=()
+steam_cmd=()
+# Started by Steam as the game's launch options ("play.sh %command%"): what follows is Steam's own command, ending
+# with ttt2.exe (Proton inside the Steam Linux Runtime, with Steam Input: controllers work). The game's switches go
+# after it.
 for a in "$@"; do
-    case "$a" in
-        --offline) offline=1 ;;
-        --name) askname=1 ;;
-        *) pass+=("$a") ;;
-    esac
+    case "$a" in *ttt2.exe|*TTT2.EXE) steam_cmd=("$@") ;; esac
 done
+if [ ${#steam_cmd[@]} -eq 0 ]; then
+    for a in "$@"; do
+        case "$a" in
+            --offline) offline=1 ;;
+            --name) askname=1 ;;
+            *) pass+=("$a") ;;
+        esac
+    done
+fi
 
 # Updates first (not when "autoupdate=false"; a failed check or download keeps the current build).
 new=""
@@ -107,10 +117,31 @@ else
 fi
 sw+=("--present_tearing=$tearing")
 
+# The picture (Linux only; the game's logic doesn't see any of it):
+#  resolution_scale=1|2|3: the game draws at 1280x720 times this (2: 2560x1440, 3: 3840x2160); 1 by default.
+#    Each step costs a lot of GPU time (the Xbox's EDRAM is emulated at that size): 2 needs a mid-range card, 3 a
+#    high-end one, or the game drops below 60 frames a second.
+#  anisotropic=1|2|4|8|16: texture filtering on surfaces seen at an angle; 16 by default (cheap).
+#  fxaa=off|on|extreme: smoothing of the edges; off by default.
+scale="$(setting_value resolution_scale)"
+[[ "$scale" =~ ^[123]$ ]] && [ "$scale" != 1 ] && sw+=("--resolution_scale=$scale")
+case "$(setting_value anisotropic)" in
+    1|off) ;;
+    2) sw+=(--anisotropic_override=1) ;;
+    4) sw+=(--anisotropic_override=2) ;;
+    8) sw+=(--anisotropic_override=3) ;;
+    *) sw+=(--anisotropic_override=4) ;;
+esac
+case "$(setting_value fxaa)" in
+    on|true) sw+=(--swap_post_effect=fxaa) ;;
+    extreme) sw+=(--swap_post_effect=fxaa_extreme) ;;
+esac
+
 args=("--game_data_root=$(winpath "$INSTALL/game")" "--update_data_root=$(winpath "$INSTALL/update")"
       "--user_data_root=$(winpath "$userdata")" "--profile_data_root=$(winpath "$PROFILE")"
       "--hid_mappings_file=$(winpath "$mappings")" "--user_name=$name" "${sw[@]}" "${pass[@]}")
 printf '%q ' "$exe" "${args[@]}" > "$userdata/last-launch.txt"
 
 cd "$BUILD"
+[ ${#steam_cmd[@]} -gt 0 ] && exec "${steam_cmd[@]}" "${args[@]}"
 exec "$LINUX_DIR/proton-env.sh" "$exe" "${args[@]}"

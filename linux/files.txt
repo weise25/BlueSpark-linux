@@ -1,0 +1,16 @@
+VERSION
+repo.txt
+files.txt
+common.sh
+install.sh
+update.sh
+build.sh
+play.sh
+proton-env.sh
+rexglue-wine.sh
+windows-cross.cmake
+cmake-shim/rexglue/rexglueConfig.cmake
+cmake-shim/rexglue/rexglueConfigVersion.cmake
+tools/package_check.py
+tools/xiso_extract.py
+tools/steam_shortcut.py

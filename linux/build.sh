@@ -9,6 +9,10 @@
 # installer asks). Progress: "# ..." lines; everything else in data/logs/build.log.
 source "$(dirname "$0")/common.sh"
 set -eo pipefail
+# (Never from inside the build folder, which may be made anew below: Steam starts the game, and so an update, there.
+# Steam's overlay library is for the game, not for the tools.)
+cd "$INSTALL"
+unset LD_PRELOAD
 log="$LOGS/build.log"
 : > "$log"
 exec 3>&1 >>"$log" 2>&1
@@ -134,8 +138,8 @@ if [ -f "$BUILD/prebuilt-manifest.txt" ] && ! cmp -s "$BUILD/prebuilt-manifest.t
         rm -rf "$REX/generated/default"
     fi
 fi
-# (Another install folder or toolchain than the one this build folder was made with: configured anew.)
-if [ -f "$BUILD/CMakeCache.txt" ] && ! grep -q "^CMAKE_CXX_COMPILER:.*=$TC/llvm/bin/clang++$" "$BUILD/CMakeCache.txt"; then
+# (A build folder made for another install folder, one moved or copied here: configured anew.)
+if [ -f "$BUILD/CMakeCache.txt" ] && ! grep -qxF "CMAKE_HOME_DIRECTORY:INTERNAL=$REX" "$BUILD/CMakeCache.txt"; then
     rm -rf "$BUILD"
 fi
 step 'Configuring the game'

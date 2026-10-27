@@ -12,6 +12,8 @@
 # Progress: "# ..." lines. No network: nothing to do, exit 0.
 source "$(dirname "$0")/common.sh"
 set -eo pipefail
+cd "$INSTALL"
+unset LD_PRELOAD
 log="$LOGS/update.log"
 exec 3>&1 >>"$log" 2>&1
 echo "== $(date -Is) update.sh $*"

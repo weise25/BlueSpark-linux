@@ -1,0 +1,18 @@
+# Keeps this fork's main in step with the original (avim2/BlueSpark): its builds and latest.json come over by
+# themselves. The fork only adds linux/, README.md and this file, so the merge never conflicts.
+# (The Linux scripts read the original's latest.json directly: players get new releases even without this.)
+name: Sync with the original
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge avim2/BlueSpark main into this fork
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST "repos/${{ github.repository }}/merge-upstream" -f branch=main

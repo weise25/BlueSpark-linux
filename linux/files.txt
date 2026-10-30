@@ -14,3 +14,7 @@ cmake-shim/rexglue/rexglueConfigVersion.cmake
 tools/package_check.py
 tools/xiso_extract.py
 tools/steam_shortcut.py
+lib/libxml2-stub/libxml2.so.2
+lib/libxml2-stub/xml_stub.c
+lib/libxml2-stub/libxml2.map
+lib/libxml2-stub/build.sh

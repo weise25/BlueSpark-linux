@@ -55,8 +55,14 @@ if [ -z "$TTT2_NO_SELF_UPDATE" ]; then
             mkdir -p "$tmp/$(dirname "$f")"
             curl -fsS --max-time 60 -o "$tmp/$f" "$LINUX_RAW/linux/$f"
         done < "$tmp/files.txt"
-        cp -r "$tmp"/. "$LINUX_DIR/"
-        chmod +x "$LINUX_DIR"/*.sh
+        # (Each file renamed into place, never copied over: play.sh and this script are running, and bash reads a
+        # script as it goes; a rename leaves them reading their own old file to its end.)
+        while read -r f; do
+            [ -n "$f" ] || continue
+            case "$f" in *.sh) chmod +x "$tmp/$f" ;; esac
+            mkdir -p "$LINUX_DIR/$(dirname "$f")"
+            mv -f "$tmp/$f" "$LINUX_DIR/$f"
+        done < "$tmp/files.txt"
         rm -rf "$tmp"
         exec 1>&3 2>&1
         TTT2_NO_SELF_UPDATE=1 exec "$LINUX_DIR/update.sh" "$@"

@@ -88,6 +88,12 @@ missing. Report Linux problems here, in this fork's issues, not to the original 
   the code translator `rexglue.exe` runs through Proton's wine, and the same checks as on Windows (the translation
   must match the release byte for byte, every hook must link).
 - `linux/tools/`: the disc image extractor, the package signature check, the Steam shortcut.
+- `linux/lib/libxml2-stub/`: a 4 KB stand-in for `libxml2.so.2` (source, symbol list and build script beside it).
+  LLVM's linker needs that library to start but only uses it for manifest merging, which this build never does;
+  Steam's flatpak runtime (since October 2026) and newer distributions only have `libxml2.so.16`. It's only used
+  where the system has no `libxml2.so.2`.
+- A failed build never leaves you without a game: the last working version is kept and starts (offline, or online
+  with players on that version), and the next start tries the build again.
 
 Keeping this fork in sync: GitHub's **Sync fork** button. The original's files are never changed here, so it never
 conflicts.

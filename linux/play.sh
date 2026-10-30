@@ -49,9 +49,16 @@ if [ -n "$new" ]; then
         error_box "The update didn't work, so the current version starts. Details: $LOGS/update.log"
     fi
 fi
-if [ ! -f "$exe" ]; then
-    with_progress 'Building the game...' "$LINUX_DIR/build.sh" ||
-        { error_box "The game couldn't be built. Run linux/install.sh in a terminal, or see $LOGS/build.log"; exit 1; }
+# A build older than the package here (an update whose build failed before): built again now.
+if [ ! -f "$exe" ] || ! cmp -s "$BUILD/prebuilt-manifest.txt" "$REX/prebuilt/manifest.txt"; then
+    if ! with_progress 'Building the game...' "$LINUX_DIR/build.sh"; then
+        if [ -f "$exe" ]; then
+            error_box "The new version couldn't be built, so the previous one starts (online, you only meet players on that version). Details: $LOGS/build.log"
+        else
+            error_box "The game couldn't be built. Run linux/install.sh in a terminal, or see $LOGS/build.log"
+            exit 1
+        fi
+    fi
 fi
 
 mkdir -p "$userdata/cache" "$PROFILE"

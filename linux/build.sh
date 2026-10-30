@@ -18,7 +18,18 @@ log="$LOGS/build.log"
 exec 3>&1 >>"$log" 2>&1
 step() { echo "# $*" >&3; echo; echo "== $*"; }
 fail() { echo "# Failed: $*" >&3; echo "FAILED: $*"; exit 1; }
-trap 'rc=$?; [ $rc -ne 0 ] && echo "# Failed (details: $log)" >&3; exit $rc' EXIT
+# (A failed build never leaves the player without a game: the ttt2.exe that worked is put aside before a relink and
+# put back if the build fails, with the DLLs it was built with, which are only replaced after a build that worked.)
+last_good="$BUILD/ttt2.exe.last-good"
+on_exit() {
+    local rc=$?
+    if [ $rc -ne 0 ]; then
+        [ ! -f "$BUILD/ttt2.exe" ] && [ -f "$last_good" ] && mv -f "$last_good" "$BUILD/ttt2.exe"
+        echo "# Failed (details: $log)" >&3
+    fi
+    exit $rc
+}
+trap on_exit EXIT
 check() { [ "$(sha256 "$1")" = "$2" ] || fail "$(basename "$1") is not the file this build was made for (it must be TTT2 4E4D0859 with title update 0.0.3.2)."; }
 
 # The pinned tools (the Windows package pins the same compiler and Microsoft libraries, rex/tools/toolchain.ps1).
@@ -72,6 +83,19 @@ if [ ! -f "$TC/msvc/Windows Kits/10/Lib/10.0.26100/um/x64/kernel32.lib" ]; then
     rm -rf "$TC/xwin-cache"
 fi
 export PATH="$TC/cmake/bin:$TC/ninja:$TC/llvm/bin:$PATH"
+
+# Every tool must start here, before anything is changed. This runs on the desktop (the installer) and inside Steam's
+# flatpak sandbox (an update started from Steam), whose libraries differ and change with their own updates.
+# LLVM's linker (lld) is linked against libxml2.so.2, which it only uses to merge manifest files (never done here):
+# where the system has none (Steam's runtime since October 2026 has libxml2.so.16), linux/lib/libxml2-stub stands in.
+if ! "$TC/llvm/bin/lld-link" --version >/dev/null 2>&1; then
+    export LD_LIBRARY_PATH="$LINUX_DIR/lib/libxml2-stub${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    echo "lld: libxml2.so.2 missing here, using linux/lib/libxml2-stub"
+fi
+for tool in "$TC/llvm/bin/clang --version" "$TC/llvm/bin/lld-link --version" "$TC/llvm/bin/llvm-rc /?" \
+            "$TC/llvm/bin/llvm-lib /?" "$TC/cmake/bin/cmake --version" "$TC/ninja/ninja --version"; do
+    $tool >/dev/null 2>&1 || { $tool 2>&1 | head -3; fail "$(basename "${tool%% *}") doesn't start here (details: $log)"; }
+done
 
 # --- your game files --------------------------------------------------------------------------------------------
 xex=""
@@ -133,7 +157,7 @@ manifest="$REX/prebuilt/manifest.txt"
     fail "rex/prebuilt/sdk/bin/rexglue.exe is not this release's: the package is damaged."
 # (A new package: relinked; its translation made anew when the translation's inputs changed.)
 if [ -f "$BUILD/prebuilt-manifest.txt" ] && ! cmp -s "$BUILD/prebuilt-manifest.txt" "$manifest"; then
-    rm -f "$BUILD/ttt2.exe"
+    [ -f "$BUILD/ttt2.exe" ] && mv -f "$BUILD/ttt2.exe" "$last_good"
     if [ "$(grep '^codegen\.' "$BUILD/prebuilt-manifest.txt")" != "$(grep '^codegen\.' "$manifest")" ]; then
         rm -rf "$REX/generated/default"
     fi
@@ -165,4 +189,5 @@ for h in $(sed -n 's/^hooks=//p' "$manifest" | tr -d '\r'); do
 done
 [ "$missing" = 0 ] || { rm -f "$BUILD/ttt2.exe"; fail "the link dropped $missing hooks"; }
 cp -f "$manifest" "$BUILD/prebuilt-manifest.txt"
+rm -f "$last_good"
 step 'Done'
